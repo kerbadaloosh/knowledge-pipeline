@@ -42,6 +42,23 @@ def feed_url(url: str) -> str:
     return url
 
 
+def canonicalize_link(link: str) -> str:
+    """Return a cleaned-up article link."""
+    if not link:
+        return ""
+    try:
+        parsed = urlparse(link)
+    except Exception:
+        return link
+
+    if parsed.netloc.endswith("openai.com") and parsed.path.startswith("/index/"):
+        # openai feeds sometimes include an obsolete /index/ prefix
+        new_path = parsed.path[len("/index") :]
+        parsed = parsed._replace(path=new_path)
+        link = parsed.geturl()
+    return link
+
+
 def entry_hash(link: str) -> str:
     return hashlib.sha256(link.encode("utf-8")).hexdigest()
 
@@ -96,7 +113,7 @@ def main():
             continue
 
         for entry in parsed.entries:
-            link = entry.get("link")
+            link = canonicalize_link(entry.get("link"))
             if not link:
                 continue
             entry_time = None
